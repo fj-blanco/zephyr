@@ -1,0 +1,30 @@
+# Copyright (c) 2024-2025 Javier Blanco-Romero (UC3M, QURSA project)
+# SPDX-License-Identifier: Apache-2.0
+
+config ENTROPY_BLAKE2S
+	bool "BLAKE2s Entropy Pool for ESP32"
+	default n
+	depends on SOC_SERIES_ESP32 || SOC_SERIES_ESP32S2 || SOC_SERIES_ESP32S3 || \
+		   SOC_SERIES_ESP32C3 || SOC_SERIES_ESP32C6 || SOC_SERIES_ESP32H2
+	select ENTROPY_HAS_DRIVER
+	help
+	  Enable the BLAKE2s-based entropy pool driver for ESP32.
+	  
+	  This driver implements a pure BLAKE2s entropy pool based on:
+	  - Linux kernel 5.17+ /dev/random implementation
+	  - QURSA project reference (linux-blake2s-entropy-pool)
+	  - Paper: "Post-Quantum Entropy as a Service for Embedded Systems"
+	  
+	  Features:
+	  - Single BLAKE2s cryptographic pool (512 bytes virtual)
+	  - Entropy accounting with init_bits tracking
+	  - External entropy injection API (for quantum entropy from QEaaS)
+	  - Asynchronous hardware refilling via work queue
+	  - Forward secrecy through output backfeed
+	  - Fast buffer (64 bytes) for ISR context
+	  
+	  Applications can inject external entropy using the
+	  entropy_add_entropy() API.
+	  
+	  This is currently ESP32-specific but architecturally designed
+	  to become the default entropy pool for all Zephyr platforms.
