@@ -28,6 +28,7 @@ if(CONFIG_FAKE_ENTROPY_NATIVE_POSIX)
 endif()
 
 zephyr_library_sources_ifdef(CONFIG_USERSPACE               entropy_handlers.c)
+zephyr_library_sources_ifdef(CONFIG_ENTROPY_BLAKE2S        entropy_blake2s.c blake2s/blake2s.c blake2s/blake2s-generic.c)
 zephyr_library_sources_ifdef(CONFIG_ENTROPY_RV32M1_TRNG     entropy_rv32m1_trng.c)
 zephyr_library_sources_ifdef(CONFIG_ENTROPY_GECKO_TRNG      entropy_gecko_trng.c)
 zephyr_library_sources_ifdef(CONFIG_ENTROPY_NEORV32_TRNG    entropy_neorv32_trng.c)
