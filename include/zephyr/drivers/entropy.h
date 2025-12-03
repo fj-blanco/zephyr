@@ -60,6 +60,17 @@ typedef int (*entropy_get_entropy_isr_t)(const struct device *dev,
 					 uint32_t flags);
 
 /**
+ * @typedef entropy_add_entropy_t
+ * @brief Callback API to add external entropy to the pool.
+ *
+ * See entropy_add_entropy() for argument description
+ */
+typedef int (*entropy_add_entropy_t)(const struct device *dev,
+				     const uint8_t *data,
+				     uint16_t len,
+				     uint16_t entropy_bits);
+
+/**
  * @brief Entropy driver API structure.
  *
  * This is the mandatory API any Entropy driver needs to expose.
@@ -67,6 +78,7 @@ typedef int (*entropy_get_entropy_isr_t)(const struct device *dev,
 __subsystem struct entropy_driver_api {
 	entropy_get_entropy_t     get_entropy;
 	entropy_get_entropy_isr_t get_entropy_isr;
+	entropy_add_entropy_t     add_entropy; /* Optional: NULL if unsupported */
 };
 
 /**
@@ -103,7 +115,7 @@ static inline int z_impl_entropy_get_entropy(const struct device *dev,
  * @param buffer Buffer to fill with entropy.
  * @param length Buffer length.
  * @param flags Flags to modify the behavior of the call.
- * @retval number of bytes filled with entropy or -error.
+ * @return number of bytes filled with entropy or -error.
  */
 static inline int entropy_get_entropy_isr(const struct device *dev,
 					  uint8_t *buffer,
@@ -118,6 +130,49 @@ static inline int entropy_get_entropy_isr(const struct device *dev,
 	}
 
 	return api->get_entropy_isr(dev, buffer, length, flags);
+}
+
+/**
+ * @brief Adds external entropy data to the driver's entropy pool.
+ *
+ * This function allows mixing of entropy from external sources
+ * (e.g., hardware sensors, network sources, quantum RNGs) into the
+ * entropy driver's internal pool. The driver may choose to:
+ * - Mix the data cryptographically (e.g., via BLAKE2s, SHA-256)
+ * - Credit entropy bits to the pool's estimate
+ * - Apply health tests before accepting the data
+ *
+ * Inspired by Linux's RNDADDENTROPY ioctl.
+ *
+ * @param dev Pointer to the entropy device.
+ * @param data Buffer containing entropy data to add.
+ * @param len Length of data in bytes.
+ * @param entropy_bits Estimated bits of entropy in the data.
+ *                     Set to 0 if unknown (driver will not credit).
+ *
+ * @retval 0 on success.
+ * @retval -ENOTSUP if driver does not support adding entropy.
+ * @retval -EINVAL if parameters are invalid.
+ * @retval -errno code otherwise.
+ */
+__syscall int entropy_add_entropy(const struct device *dev,
+				  const uint8_t *data,
+				  uint16_t len,
+				  uint16_t entropy_bits);
+
+static inline int z_impl_entropy_add_entropy(const struct device *dev,
+					     const uint8_t *data,
+					     uint16_t len,
+					     uint16_t entropy_bits)
+{
+	const struct entropy_driver_api *api =
+		(const struct entropy_driver_api *)dev->api;
+
+	if (unlikely(!api->add_entropy)) {
+		return -ENOTSUP;
+	}
+
+	return api->add_entropy(dev, data, len, entropy_bits);
 }
 
 

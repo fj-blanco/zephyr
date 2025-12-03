@@ -1,0 +1,47 @@
+# Copyright (c) 2024-2025 Javier Blanco-Romero (UC3M, QURSA project)
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  BLAKE2s-based Entropy Pool Driver (Generic)
+  
+  This driver implements a cryptographically secure entropy pool using BLAKE2s
+  as an abstraction layer on top of any hardware entropy driver. It can work
+  with any Zephyr entropy driver (ESP32 TRNG, nRF RNG, STM32 RNG, etc.)
+  specified via the hardware-device property.
+  
+  The pool uses BLAKE2s to mix entropy from multiple sources:
+  - Hardware entropy backend (referenced via hardware-device phandle)
+  - External entropy sources (injected via entropy_add_entropy() API)
+  
+  Features:
+  - 512-byte entropy pool with BLAKE2s cryptographic mixing
+  - Automatic refilling from hardware backend when pool level drops below 128 bytes
+  - Entropy estimation and pool level tracking
+  - External entropy injection support
+  
+  Example usage in devicetree:
+  
+    / {
+        entropy_pool: entropy-blake2s-pool {
+            compatible = "zephyr,entropy-blake2s-pool";
+            hardware-device = <&trng0>;  /* Reference to hardware entropy driver */
+            status = "okay";
+        };
+    };
+
+compatible: "zephyr,entropy-blake2s-pool"
+
+properties:
+  hardware-device:
+    type: phandle
+    required: true
+    description: |
+      Phandle to the hardware entropy driver device that will be used as the
+      backend source for this pool. This can be any Zephyr entropy driver:
+      - ESP32: &trng0 (espressif,esp32-trng)
+      - nRF: &rng (nordic,nrf-rng)
+      - STM32: &rng (st,stm32-rng)
+      - etc.
+      
+      The BLAKE2s pool will automatically call entropy_get_entropy() on this
+      device to refill the pool when needed.
